@@ -84,8 +84,12 @@ WSGI_APPLICATION = 'mts_hahaton.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_db',  # Имя базы данных
+        'USER': 'postgres',     # Имя пользователя
+        'PASSWORD': 'postgres_password',  # Пароль
+        'HOST': '127.0.0.1',  # Адрес Docker-контейнера (локальный хост)
+        'PORT': '5432',       # Порт PostgreSQL
     }
 }
 

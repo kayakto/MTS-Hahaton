@@ -13,7 +13,7 @@ def import_excel(request):
 
 
 @api_view(['GET'])
-def search_filters(request, search_text: str):
+def search_filters(request, search_text):
     query = search_text.lower()
 
     units = Unit.objects.filter(name__icontains=query)
