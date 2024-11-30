@@ -77,11 +77,9 @@ def search_by_filters(request):
     if not filters:
         return Response({"error": "No filters provided"}, status=400)
 
-    # Начинаем с пустого набора запросов
     unit_queries = Q()
     employee_queries = Q()
 
-    # Разбиваем фильтры на категории
     for filter_ in filters:
         value = filter_.get('value', '').lower()
         type_ = filter_.get('type', '')
@@ -176,17 +174,16 @@ def get_hierarchy(request):
     - depth: Глубина раскрытия иерархии (по умолчанию 2)
     """
     unit_id = request.query_params.get('id')
-    depth = int(request.query_params.get('depth', 1))  # По умолчанию глубина 2
+    depth = int(request.query_params.get('depth', 1))
 
     if unit_id:
-        # Если указан id, ищем конкретное подразделение
-        try:
-            unit = Unit.objects.get(id=unit_id)
-            hierarchy = build_unit_hierarchy(unit, depth)
-        except Unit.DoesNotExist:
+        unit = Unit.objects.get(id=unit_id)
+
+        if not unit:
             return Response({"error": "Unit not found"}, status=404)
+
+        hierarchy = build_unit_hierarchy(unit, depth)
     else:
-        # Если id не указан, возвращаем корневые подразделения
         root_units = Unit.objects.filter(parent__isnull=True)
         hierarchy = [build_unit_hierarchy(unit, depth) for unit in root_units]
 
@@ -215,6 +212,56 @@ def build_branch_hierarchy(unit):
         return current_unit_data
 
 
+def get_functional_manager(employee):
+    """
+        Возвращает функционального руководителя для указанного сотрудника.
+        :param employee: Экземпляр модели Employee.
+        :return: Словарь с данными функционального руководителя или сообщение об отсутствии.
+        """
+    current_unit = employee.unit.parent
+
+    while current_unit:
+        if current_unit.unit_type == "функциональный блок":
+            manager = Employee.objects.get(Q(unit=current_unit) & Q(position__employee_role="руководство"))
+
+            if manager:
+                return {
+                    "id": manager.id,
+                    "name": f"{manager.last_name} {manager.first_name}",
+                    "position": manager.position.name
+                }
+            break
+
+        current_unit = current_unit.parent
+
+    return None
+
+
+def get_direct_manager(employee):
+    current_unit = employee.unit
+    if employee.position.employee_role == "руководство":
+        current_unit = current_unit.parent
+
+    while current_unit:
+        if current_unit.unit_type == "подразделение":
+            managers = Employee.objects.filter(Q(unit=current_unit) & Q(position__employee_role="руководство"))
+
+            print(managers)
+            if managers:
+                return [
+                    {
+                        "id": manager.id,
+                        "name": f"{manager.last_name} {manager.first_name}",
+                        "position": manager.position.name
+                    } for manager in managers
+                ]
+            break
+
+        current_unit = current_unit.parent
+
+    return None
+
+
 @api_view(['GET'])
 def get_employee(request, employee_id):
     """
@@ -226,7 +273,11 @@ def get_employee(request, employee_id):
     if not employee:
         return Response({"error": "Employee not found"}, status=404)
 
-    return Response(EmployeeSerializer(employee).data)
+    return Response(
+        EmployeeSerializer(employee).data |
+        {"functional_manager": get_functional_manager(employee)} |
+        {"direct_managers": get_direct_manager(employee)}
+    )
 
 
 def get_branch_hierarchy(unit):
@@ -260,9 +311,8 @@ def get_employee_branch(request, employee_id):
     employee = Employee.objects.get(id=employee_id)
 
     if not employee:
-        return Response([])
+        return Response({"error": "Employee not found"}, status=404)
 
     branch = get_branch_hierarchy(employee.unit)
 
     return Response(branch)
-
