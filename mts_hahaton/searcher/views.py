@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from .db_parser import parse_excel_and_save_to_db
 from .models import Unit, EmployeePosition, Employee
-from .serializers import EmployeeSerializer, EmployeeInfoSerializer
+from .serializers import EmployeeInfoSerializer
 
 
 @api_view(['GET'])
@@ -144,3 +144,50 @@ def search_by_filters(request):
 
     return Response(hierarchy)
 
+
+def build_unit_hierarchy(unit, depth):
+    """
+    Рекурсивно строит иерархию подразделений до указанной глубины.
+    :param unit: Текущее подразделение
+    :param depth: Текущая глубина рекурсии
+    :return: Словарь с данными подразделения и сотрудниками
+    """
+    if depth < 0:
+        return None  # Если глубина отрицательная, не добавляем вложенные подразделения
+
+    return {
+        "id": unit.id,
+        "name": unit.name,
+        "unit_type": unit.unit_type,
+        "employees": EmployeeInfoSerializer(unit.employees.all(), many=True).data,
+        "children": [
+            build_unit_hierarchy(child, depth - 1) for child in unit.children.all()
+        ],
+        "children_count": unit.children.count()
+    }
+
+
+@api_view(['GET'])
+def get_hierarchy(request):
+    """
+    Возвращает иерархию подразделений с сотрудниками, ограниченную по глубине.
+    Принимает параметры:
+    - id: ID подразделения для раскрытия (по умолчанию корневые подразделения)
+    - depth: Глубина раскрытия иерархии (по умолчанию 2)
+    """
+    unit_id = request.query_params.get('id')
+    depth = int(request.query_params.get('depth', 1))  # По умолчанию глубина 2
+
+    if unit_id:
+        # Если указан id, ищем конкретное подразделение
+        try:
+            unit = Unit.objects.get(id=unit_id)
+            hierarchy = build_unit_hierarchy(unit, depth)
+        except Unit.DoesNotExist:
+            return Response({"error": "Unit not found"}, status=404)
+    else:
+        # Если id не указан, возвращаем корневые подразделения
+        root_units = Unit.objects.filter(parent__isnull=True)
+        hierarchy = [build_unit_hierarchy(unit, depth) for unit in root_units]
+
+    return Response(hierarchy)
