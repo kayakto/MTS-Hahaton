@@ -17,6 +17,7 @@ class EmployeePositionSerializer(serializers.ModelSerializer):
 class EmployeeSerializer(serializers.ModelSerializer):
     unit = UnitSerializer(read_only=True)
     position = EmployeePositionSerializer(read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
@@ -24,13 +25,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'id',
             'unit',
             'position',
-            'first_name',
-            'last_name',
+            'name',
             'phone',
             'city',
             'address',
             'email'
         ]
+
+    def get_name(self, obj):
+        """Возвращает объединенное имя"""
+        return f"{obj.last_name} {obj.first_name}"
 
 
 class EmployeeInfoSerializer(serializers.ModelSerializer):

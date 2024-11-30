@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from .db_parser import parse_excel_and_save_to_db
 from .models import Unit, EmployeePosition, Employee
-from .serializers import EmployeeInfoSerializer
+from .serializers import EmployeeInfoSerializer, EmployeeSerializer
 
 
 @api_view(['GET'])
@@ -191,3 +191,78 @@ def get_hierarchy(request):
         hierarchy = [build_unit_hierarchy(unit, depth) for unit in root_units]
 
     return Response(hierarchy)
+
+
+def build_branch_hierarchy(unit):
+    """
+    Рекурсивно строит вложенную иерархию от корня до подразделения сотрудника.
+    """
+    if unit is None:
+        return None
+
+    parent_hierarchy = build_branch_hierarchy(unit.parent)
+    current_unit_data = {
+        "id": unit.id,
+        "name": unit.name,
+        "unit_type": unit.unit_type,
+    }
+
+    if parent_hierarchy:
+        # Вложим текущий узел в children предыдущего уровня
+        parent_hierarchy["children"] = [current_unit_data]
+        return parent_hierarchy
+    else:
+        return current_unit_data
+
+
+@api_view(['GET'])
+def get_employee(request, employee_id):
+    """
+    Возвращает ветку от корневого подразделения до сотрудника.
+    :param employee_id: ID сотрудника
+    """
+    employee = Employee.objects.get(id=employee_id)
+
+    if not employee:
+        return Response({"error": "Employee not found"}, status=404)
+
+    return Response(EmployeeSerializer(employee).data)
+
+
+def get_branch_hierarchy(unit):
+    """
+    Строит вложенную структуру от корня до указанного подразделения, используя get_ancestors().
+    """
+    hierarchy = {}
+    current_level = hierarchy
+    ancestors = unit.get_ancestors(include_self=True)
+
+    for ancestor in ancestors:
+        current_level["id"] = ancestor.id
+        current_level["name"] = ancestor.name
+        current_level["unit_type"] = ancestor.unit_type
+
+        current_level["children"] = {}
+        current_level = current_level["children"]
+
+    # Убираем последний пустой контейнер для детей
+    current_level.pop("children", None)
+
+    return hierarchy
+
+
+@api_view(['GET'])
+def get_employee_branch(request, employee_id):
+    """
+    Возвращает ветку от корневого подразделения до сотрудника.
+    :param employee_id: ID сотрудника
+    """
+    employee = Employee.objects.get(id=employee_id)
+
+    if not employee:
+        return Response([])
+
+    branch = get_branch_hierarchy(employee.unit)
+
+    return Response(branch)
+
