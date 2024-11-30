@@ -74,7 +74,6 @@ def parse_excel_and_save_to_db(file_path):
             )[0]
 
             Employee.objects.create(
-                name=f"{last_name} {first_name}",
                 unit=unit_5,
                 position=position,
                 first_name=first_name,

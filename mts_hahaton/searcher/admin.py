@@ -21,8 +21,8 @@ class EmployeePositionAdmin(admin.ModelAdmin):
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'unit', 'position', 'city', 'email', 'phone')
+    list_display = ('first_name', 'last_name', 'unit', 'position', 'city', 'email', 'phone')
     list_filter = ('unit', 'position', 'city')
-    search_fields = ('name', 'first_name', 'last_name', 'email')
+    search_fields = ('first_name', 'last_name', 'email')
     ordering = ('last_name', 'first_name')
     autocomplete_fields = ('unit', 'position')
