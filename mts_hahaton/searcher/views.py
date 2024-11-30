@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from .db_parser import parse_excel_and_save_to_db
 from .models import Unit, EmployeePosition, Employee
+from .serializers import EmployeeSerializer, EmployeeInfoSerializer
 
 
 @api_view(['GET'])
@@ -103,7 +104,6 @@ def search_by_filters(request):
             employee_queries |= Q(**{f"{field_map[type_]}__icontains": value})
 
     employee_unit_query = Q()
-    all_units = Unit.objects.none()
 
     if unit_queries.children:
         matching_units = Unit.objects.filter(unit_queries)
@@ -121,16 +121,10 @@ def search_by_filters(request):
         for unit in matching_units:
             all_units |= unit.get_ancestors()
 
-        all_units = all_units.distinct('id')
-
-    units_hierarchy = all_units
-
     matching_employees = Employee.objects.filter(employee_queries & employee_unit_query)
 
     if matching_employees.count() == 0:
         return Response([])
-
-    employee = matching_employees[0]
 
     hierarchy = []
 
@@ -145,9 +139,7 @@ def search_by_filters(request):
 
         hierarchy.append({
             "path": path,
-            "employees": [{
-                "name": f"{employee.last_name} {employee.first_name}" for employee in unit_employees
-            }]
+            "employees": [EmployeeInfoSerializer(employee).data for employee in unit_employees]
         })
 
     return Response(hierarchy)
