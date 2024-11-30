@@ -3,7 +3,8 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 
 class Unit(MPTTModel):
-    name = models.CharField(max_length=255, db_collation="nocase")
+    id = models.IntegerField(primary_key=True, auto_created=True)
+    name = models.CharField(max_length=255)
     parent = TreeForeignKey(
         'self',
         null=True,
@@ -42,12 +43,12 @@ class EmployeePosition(models.Model):
 class Employee(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name='employees')
     position = models.ForeignKey(EmployeePosition, on_delete=models.CASCADE, related_name='employees')
-    first_name = models.CharField(max_length=100, db_collation="nocase")
-    last_name = models.CharField(max_length=100, db_collation="nocase")
-    phone = models.CharField(max_length=100, null=True, db_collation="nocase")
-    city = models.CharField(max_length=255, null=True, db_collation="nocase")
-    address = models.CharField(max_length=100, null=True, db_collation="nocase")
-    email = models.CharField(max_length=100, null=True, db_collation="nocase")
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=100, null=True)
+    city = models.CharField(max_length=255, null=True)
+    address = models.CharField(max_length=100, null=True)
+    email = models.CharField(max_length=100, null=True)
 
     def __str__(self):
         return f"{self.last_name} {self.first_name}"

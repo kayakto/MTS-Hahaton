@@ -67,3 +67,88 @@ def search_filters(request, search_text):
                [{"value": value, "type": type_} for value, type_ in employees_data])
 
     return Response(results)
+
+
+@api_view(['POST'])
+def search_by_filters(request):
+    filters = request.data.get('filters', [])
+
+    if not filters:
+        return Response({"error": "No filters provided"}, status=400)
+
+    # Начинаем с пустого набора запросов
+    unit_queries = Q()
+    employee_queries = Q()
+
+    # Разбиваем фильтры на категории
+    for filter_ in filters:
+        value = filter_.get('value', '').lower()
+        type_ = filter_.get('type', '')
+
+        if type_ in ['Функциональный блок', 'Подразделение']:
+            unit_queries |= Q(name__icontains=value) & Q(unit_type__icontains=type_)
+        elif type_ == 'Должность':
+            employee_queries |= Q(position__name__icontains=value)
+        elif type_ == 'Роль':
+            employee_queries |= Q(position__employee_role__icontains=value)
+        elif type_ in ['Имя', 'Фамилия', 'Город', 'Адрес', 'Телефон', 'Почта']:
+            field_map = {
+                'Имя': 'first_name',
+                'Фамилия': 'last_name',
+                'Город': 'city',
+                'Адрес': 'address',
+                'Телефон': 'phone',
+                'Почта': 'email'
+            }
+            employee_queries |= Q(**{f"{field_map[type_]}__icontains": value})
+
+    employee_unit_query = Q()
+    all_units = Unit.objects.none()
+
+    if unit_queries.children:
+        matching_units = Unit.objects.filter(unit_queries)
+
+        descendant_units = Unit.objects.none()
+
+        for unit in matching_units:
+            descendant_units |= unit.get_descendants(include_self=True)
+
+        all_units = descendant_units.distinct('id')
+
+        employee_unit_query |= Q(unit__in=all_units)
+
+        all_units = descendant_units
+        for unit in matching_units:
+            all_units |= unit.get_ancestors()
+
+        all_units = all_units.distinct('id')
+
+    units_hierarchy = all_units
+
+    matching_employees = Employee.objects.filter(employee_queries & employee_unit_query)
+
+    if matching_employees.count() == 0:
+        return Response([])
+
+    employee = matching_employees[0]
+
+    hierarchy = []
+
+    units = Unit.objects.all()
+    for unit in units:
+        unit_employees = matching_employees.filter(unit=unit)
+
+        if len(unit_employees) == 0:
+            continue
+
+        path = [ancestor.name for ancestor in unit.get_ancestors(include_self=True)]
+
+        hierarchy.append({
+            "path": path,
+            "employees": [{
+                "name": f"{employee.last_name} {employee.first_name}" for employee in unit_employees
+            }]
+        })
+
+    return Response(hierarchy)
+
