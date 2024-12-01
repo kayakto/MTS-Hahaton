@@ -1,9 +1,12 @@
 import openpyxl
+from django.core.management import call_command
 from django.db import transaction
 from .models import *
 
 
 def parse_excel_and_save_to_db(file_path):
+    call_command('migrate')
+
     workbook = openpyxl.load_workbook(file_path)
     sheet = workbook.active
 
@@ -70,7 +73,7 @@ def parse_excel_and_save_to_db(file_path):
 
             position = EmployeePosition.objects.get_or_create(
                 name=str.strip(position_name),
-                employee_role=role
+                employee_role=str.strip(role)
             )[0]
 
             Employee.objects.create(

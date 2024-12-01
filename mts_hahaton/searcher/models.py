@@ -3,7 +3,6 @@ from mptt.models import MPTTModel, TreeForeignKey
 
 
 class Unit(MPTTModel):
-    id = models.IntegerField(primary_key=True, auto_created=True)
     name = models.CharField(max_length=255)
     parent = TreeForeignKey(
         'self',

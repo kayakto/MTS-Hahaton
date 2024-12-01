@@ -3,45 +3,72 @@ from .models import Unit, EmployeePosition, Employee
 
 
 class UnitSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
-
     class Meta:
         model = Unit
-        fields = ('name', 'type')
-
-    def get_type(self, obj):
-        return "Подразделение"
+        fields = ['id', 'name', 'parent', 'unit_type']
 
 
 class EmployeePositionSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
-
     class Meta:
         model = EmployeePosition
-        fields = ('name', 'type')
-
-    def get_type(self, obj):
-        return "Должность"
-
-
-class EmployeeRoleSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source="employee_role")
-    type = serializers.SerializerMethodField()
-
-    class Meta:
-        model = EmployeePosition
-        fields = ('name', 'type')
-
-    def get_type(self, obj):
-        return "Роль"
+        fields = ['id', 'name', 'employee_role']
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    type = serializers.SerializerMethodField()
+    unit = UnitSerializer(read_only=True)
+    position = EmployeePositionSerializer(read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Employee
-        fields = ('name', 'type')
+        fields = [
+            'id',
+            'unit',
+            'position',
+            'name',
+            'phone',
+            'city',
+            'address',
+            'email'
+        ]
 
-    def get_type(self, obj):
-        return "Сотрудник"
+    def get_name(self, obj):
+        """Возвращает объединенное имя"""
+        return f"{obj.last_name} {obj.first_name}"
+
+
+class EmployeeInfoSerializer(serializers.ModelSerializer):
+    position = EmployeePositionSerializer(read_only=True)
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = [
+            'id',
+            'position',
+            'name',
+            'phone',
+            'city',
+            'address',
+            'email'
+        ]
+
+    def get_name(self, obj):
+        """Возвращает объединенное имя"""
+        return f"{obj.last_name} {obj.first_name}"
+
+
+# Если нужна возможность обновлять или создавать объект Employee, можно добавить методы:
+class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = [
+            'unit',
+            'position',
+            'first_name',
+            'last_name',
+            'phone',
+            'city',
+            'address',
+            'email'
+        ]

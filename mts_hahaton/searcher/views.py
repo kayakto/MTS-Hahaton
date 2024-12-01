@@ -4,12 +4,10 @@ from rest_framework.response import Response
 
 from .db_parser import parse_excel_and_save_to_db
 from .models import Unit, EmployeePosition, Employee
+from .serializers import EmployeeInfoSerializer, EmployeeSerializer
 
 
-@api_view(['GET'])
-def import_excel(request):
-    parse_excel_and_save_to_db('searcher/file.xlsx')
-    return Response("OK")
+parse_excel_and_save_to_db('searcher/file.xlsx')
 
 
 @api_view(['GET'])
@@ -76,11 +74,9 @@ def search_by_filters(request):
     if not filters:
         return Response({"error": "No filters provided"}, status=400)
 
-    # Начинаем с пустого набора запросов
     unit_queries = Q()
     employee_queries = Q()
 
-    # Разбиваем фильтры на категории
     for filter_ in filters:
         value = filter_.get('value', '').lower()
         type_ = filter_.get('type', '')
@@ -103,7 +99,6 @@ def search_by_filters(request):
             employee_queries |= Q(**{f"{field_map[type_]}__icontains": value})
 
     employee_unit_query = Q()
-    all_units = Unit.objects.none()
 
     if unit_queries.children:
         matching_units = Unit.objects.filter(unit_queries)
@@ -121,16 +116,10 @@ def search_by_filters(request):
         for unit in matching_units:
             all_units |= unit.get_ancestors()
 
-        all_units = all_units.distinct('id')
-
-    units_hierarchy = all_units
-
     matching_employees = Employee.objects.filter(employee_queries & employee_unit_query)
 
     if matching_employees.count() == 0:
         return Response([])
-
-    employee = matching_employees[0]
 
     hierarchy = []
 
@@ -145,10 +134,191 @@ def search_by_filters(request):
 
         hierarchy.append({
             "path": path,
-            "employees": [{
-                "name": f"{employee.last_name} {employee.first_name}" for employee in unit_employees
-            }]
+            "employees": [EmployeeInfoSerializer(employee).data for employee in unit_employees]
         })
 
     return Response(hierarchy)
 
+
+def build_unit_hierarchy(unit, depth):
+    """
+    Рекурсивно строит иерархию подразделений до указанной глубины.
+    :param unit: Текущее подразделение
+    :param depth: Текущая глубина рекурсии
+    :return: Словарь с данными подразделения и сотрудниками
+    """
+    if depth < 0:
+        return None  # Если глубина отрицательная, не добавляем вложенные подразделения
+
+    return {
+        "id": unit.id,
+        "name": unit.name,
+        "unit_type": unit.unit_type,
+        "employees": EmployeeInfoSerializer(unit.employees.all(), many=True).data,
+        "children": [
+            build_unit_hierarchy(child, depth - 1) for child in unit.children.all()
+        ],
+        "children_count": unit.children.count()
+    }
+
+
+@api_view(['GET'])
+def get_hierarchy(request):
+    """
+    Возвращает иерархию подразделений с сотрудниками, ограниченную по глубине.
+    Принимает параметры:
+    - id: ID подразделения для раскрытия (по умолчанию корневые подразделения)
+    - depth: Глубина раскрытия иерархии (по умолчанию 2)
+    """
+    unit_id = request.query_params.get('id')
+    depth = int(request.query_params.get('depth', 1))
+
+    if unit_id:
+        unit = Unit.objects.get(id=unit_id)
+
+        if not unit:
+            return Response({"error": "Unit not found"}, status=404)
+
+        hierarchy = build_unit_hierarchy(unit, depth)
+    else:
+        root_units = Unit.objects.filter(parent__isnull=True)
+        hierarchy = [build_unit_hierarchy(unit, depth) for unit in root_units]
+
+    return Response(hierarchy)
+
+
+def build_branch_hierarchy(unit):
+    """
+    Рекурсивно строит вложенную иерархию от корня до подразделения сотрудника.
+    """
+    if unit is None:
+        return None
+
+    parent_hierarchy = build_branch_hierarchy(unit.parent)
+    current_unit_data = {
+        "id": unit.id,
+        "name": unit.name,
+        "unit_type": unit.unit_type,
+    }
+
+    if parent_hierarchy:
+        # Вложим текущий узел в children предыдущего уровня
+        parent_hierarchy["children"] = [current_unit_data]
+        return parent_hierarchy
+    else:
+        return current_unit_data
+
+
+def get_functional_manager(employee):
+    """
+        Возвращает функционального руководителя для указанного сотрудника.
+        :param employee: Экземпляр модели Employee.
+        :return: Словарь с данными функционального руководителя или сообщение об отсутствии.
+        """
+    current_unit = employee.unit.parent
+
+    while current_unit:
+        if current_unit.unit_type == "функциональный блок":
+            manager = Employee.objects.get(Q(unit=current_unit) & Q(position__employee_role="руководство"))
+
+            if manager:
+                return {
+                    "id": manager.id,
+                    "name": f"{manager.last_name} {manager.first_name}",
+                    "position": manager.position.name
+                }
+            break
+
+        current_unit = current_unit.parent
+
+    return None
+
+
+def get_direct_manager(employee):
+    current_unit = employee.unit
+    if employee.position.employee_role == "руководство":
+        current_unit = current_unit.parent
+
+    while current_unit:
+        if current_unit.unit_type == "подразделение":
+            managers = Employee.objects.filter(Q(unit=current_unit) & Q(position__employee_role="руководство"))
+
+            print(managers)
+            if managers:
+                return [
+                    {
+                        "id": manager.id,
+                        "name": f"{manager.last_name} {manager.first_name}",
+                        "position": manager.position.name
+                    } for manager in managers
+                ]
+            break
+
+        current_unit = current_unit.parent
+
+    return None
+
+
+@api_view(['GET'])
+def get_employee(request, employee_id):
+    """
+    Возвращает ветку от корневого подразделения до сотрудника.
+    :param employee_id: ID сотрудника
+    """
+    employee = Employee.objects.get(id=employee_id)
+
+    if not employee:
+        return Response({"error": "Employee not found"}, status=404)
+
+    return Response(
+        EmployeeSerializer(employee).data |
+        {"functional_manager": get_functional_manager(employee)} |
+        {"direct_managers": get_direct_manager(employee)}
+    )
+
+
+def get_branch_hierarchy(unit):
+    """
+    Строит вложенную структуру от корня до указанного подразделения, используя get_ancestors().
+    """
+    hierarchy = {}
+    current_level = hierarchy
+    ancestors = unit.get_ancestors(include_self=True)
+
+    for ancestor in ancestors:
+        current_level["id"] = ancestor.id
+        current_level["name"] = ancestor.name
+        current_level["unit_type"] = ancestor.unit_type
+
+        managers = Employee.objects.filter(Q(unit=ancestor) & Q(position__employee_role="руководство"))
+        current_level["managers"] = [
+            {
+                "id": manager.id,
+                "name": f"{manager.last_name} {manager.first_name}",
+                "position": manager.position.name
+            } for manager in managers
+        ]
+
+        current_level["children"] = {}
+        current_level = current_level["children"]
+
+    # Убираем последний пустой контейнер для детей
+    current_level.pop("children", None)
+
+    return hierarchy
+
+
+@api_view(['GET'])
+def get_employee_branch(request, employee_id):
+    """
+    Возвращает ветку от корневого подразделения до сотрудника.
+    :param employee_id: ID сотрудника
+    """
+    employee = Employee.objects.get(id=employee_id)
+
+    if not employee:
+        return Response({"error": "Employee not found"}, status=404)
+
+    branch = get_branch_hierarchy(employee.unit)
+
+    return Response(branch)
