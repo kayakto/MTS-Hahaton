@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,11 +86,11 @@ WSGI_APPLICATION = 'mts_hahaton.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_db',  # Имя базы данных
-        'USER': 'postgres',     # Имя пользователя
-        'PASSWORD': 'postgres_password',  # Пароль
-        'HOST': '127.0.0.1',  # Адрес Docker-контейнера (локальный хост)
-        'PORT': '5432',       # Порт PostgreSQL
+        'NAME': os.getenv('DATABASE_NAME', 'django_db'),
+        'USER': os.getenv('DATABASE_USER', 'postgres'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres_password'),
+        'HOST': os.getenv('DATABASE_HOST', 'postgres'),
+        'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
 }
 
