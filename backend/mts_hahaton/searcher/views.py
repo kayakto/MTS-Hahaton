@@ -9,8 +9,8 @@ from .db_parser import parse_excel_and_save_to_db
 from .models import Unit, EmployeePosition, Employee
 from .serializers import EmployeeInfoSerializer, EmployeeSerializer
 
-
 parse_excel_and_save_to_db(os.path.join(os.getcwd(), Path('mts_hahaton/searcher/file.xlsx')))
+
 
 @api_view(['GET'])
 def search_filters(request, search_text):
@@ -53,11 +53,11 @@ def search_filters(request, search_text):
         if employee.city and query.lower() in employee.city.lower():
             matches['Город'] = employee.city
         if employee.address and query.lower() in employee.address.lower():
-            matches['Адрес'] = employee.address
+            matches['Адрес'] = query.lower()
         if employee.phone and query.lower() in employee.phone.lower():
-            matches['Телефон'] = employee.phone
+            matches['Телефон'] = query.lower()
         if employee.email and query.lower() in employee.email.lower():
-            matches['Почта'] = employee.email
+            matches['Почта'] = query.lower()
         for field, value in matches.items():
             employees_data.add((value, field))
 
@@ -84,11 +84,11 @@ def search_by_filters(request):
         type_ = filter_.get('type', '')
 
         if type_ in ['Функциональный блок', 'Подразделение']:
-            unit_queries |= Q(name__icontains=value) & Q(unit_type__icontains=type_)
+            unit_queries &= Q(name__icontains=value) & Q(unit_type__icontains=type_)
         elif type_ == 'Должность':
-            employee_queries |= Q(position__name__icontains=value)
+            employee_queries &= Q(position__name__icontains=value)
         elif type_ == 'Роль':
-            employee_queries |= Q(position__employee_role__icontains=value)
+            employee_queries &= Q(position__employee_role__icontains=value)
         elif type_ in ['Имя', 'Фамилия', 'Город', 'Адрес', 'Телефон', 'Почта']:
             field_map = {
                 'Имя': 'first_name',
@@ -98,7 +98,7 @@ def search_by_filters(request):
                 'Телефон': 'phone',
                 'Почта': 'email'
             }
-            employee_queries |= Q(**{f"{field_map[type_]}__icontains": value})
+            employee_queries &= Q(**{f"{field_map[type_]}__icontains": value})
 
     employee_unit_query = Q()
 
