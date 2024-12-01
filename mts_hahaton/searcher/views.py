@@ -290,6 +290,15 @@ def get_branch_hierarchy(unit):
         current_level["name"] = ancestor.name
         current_level["unit_type"] = ancestor.unit_type
 
+        managers = Employee.objects.filter(Q(unit=ancestor) & Q(position__employee_role="руководство"))
+        current_level["managers"] = [
+            {
+                "id": manager.id,
+                "name": f"{manager.last_name} {manager.first_name}",
+                "position": manager.position.name
+            } for manager in managers
+        ]
+
         current_level["children"] = {}
         current_level = current_level["children"]
 
