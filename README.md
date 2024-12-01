@@ -37,6 +37,10 @@ DATABASE_PORT=5432
 docker-compose up -d 
 ```
 
+3. 
+- Backend доступен на порте [localhost:8000](http://localhost:8000/)
+- Frontend доступен на порте [localhost:4000](http://localhost:4000/)
+
 ### Альтернативный вариант запуска бекенда для разработки
 
 1. Перейдите к бекенду
