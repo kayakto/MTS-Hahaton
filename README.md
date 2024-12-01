@@ -14,6 +14,11 @@ git clone git@github.com:kayakto/MTS-Hahaton.git
 cd MTS-Hahaton
 ```
 
+3. Обновить проект с фронтендом
+```bash
+git submodule update --init --recursive
+```
+
 ### Запуск через Docker
 1. Создайте **.env** файл со следующей структурой:
 ```
