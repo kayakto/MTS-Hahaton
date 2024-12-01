@@ -95,7 +95,7 @@ DATABASES = {
         'NAME': os.getenv('DATABASE_NAME', 'django_db'),
         'USER': os.getenv('DATABASE_USER', 'postgres'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres_password'),
-        'HOST': os.getenv('DATABASE_HOST', 'postgres'),
+        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
         'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
 }

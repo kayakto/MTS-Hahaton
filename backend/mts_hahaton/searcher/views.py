@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -7,8 +10,7 @@ from .models import Unit, EmployeePosition, Employee
 from .serializers import EmployeeInfoSerializer, EmployeeSerializer
 
 
-parse_excel_and_save_to_db('searcher/file.xlsx')
-
+parse_excel_and_save_to_db(os.path.join(os.getcwd(), Path('mts_hahaton/searcher/file.xlsx')))
 
 @api_view(['GET'])
 def search_filters(request, search_text):
