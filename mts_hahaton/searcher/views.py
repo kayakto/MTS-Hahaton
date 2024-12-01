@@ -7,10 +7,7 @@ from .models import Unit, EmployeePosition, Employee
 from .serializers import EmployeeInfoSerializer, EmployeeSerializer
 
 
-@api_view(['GET'])
-def import_excel(request):
-    parse_excel_and_save_to_db('searcher/file.xlsx')
-    return Response("OK")
+parse_excel_and_save_to_db('searcher/file.xlsx')
 
 
 @api_view(['GET'])
