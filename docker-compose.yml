@@ -23,5 +23,11 @@ services:
     depends_on:
       - postgres
 
+  mts-frontend:
+    build: ./frontend
+    container_name: mts-frontend
+    ports:
+      - "4000:4000"
+
 volumes:
   postgres_data:
