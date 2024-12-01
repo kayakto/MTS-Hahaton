@@ -36,7 +36,7 @@ def parse_excel_and_save_to_db(file_path):
             unit_1 = Unit.objects.get_or_create(
                 name=str.strip(unit_1_name),
                 parent=None,
-                unit_type='подразделение'
+                unit_type='Подразделение'
             )[0]
 
             unit_2 = unit_1
@@ -44,7 +44,7 @@ def parse_excel_and_save_to_db(file_path):
                 unit_2 = Unit.objects.get_or_create(
                     name=str.strip(functional_block),
                     parent=unit_1,
-                    unit_type='функциональный блок'
+                    unit_type='Функциональный блок'
                 )[0]
 
             unit_3 = unit_2
@@ -52,7 +52,7 @@ def parse_excel_and_save_to_db(file_path):
                 unit_3 = Unit.objects.get_or_create(
                     name=str.strip(unit_2_name),
                     parent=unit_2,
-                    unit_type='подразделение'
+                    unit_type='Подразделение'
                 )[0]
 
             unit_4 = unit_3
@@ -60,7 +60,7 @@ def parse_excel_and_save_to_db(file_path):
                 unit_4 = Unit.objects.get_or_create(
                     name=str.strip(unit_3_name),
                     parent=unit_3,
-                    unit_type='подразделение'
+                    unit_type='Подразделение'
                 )[0]
 
             unit_5 = unit_4
@@ -68,7 +68,7 @@ def parse_excel_and_save_to_db(file_path):
                 unit_5 = Unit.objects.get_or_create(
                     name=str.strip(unit_4_name),
                     parent=unit_4,
-                    unit_type='подразделение'
+                    unit_type='Подразделение'
                 )[0]
 
             position = EmployeePosition.objects.get_or_create(

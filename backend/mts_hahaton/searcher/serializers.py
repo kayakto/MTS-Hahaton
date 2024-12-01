@@ -33,7 +33,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
         ]
 
     def get_name(self, obj):
-        """Возвращает объединенное имя"""
         return f"{obj.last_name} {obj.first_name}"
 
 
@@ -54,11 +53,9 @@ class EmployeeInfoSerializer(serializers.ModelSerializer):
         ]
 
     def get_name(self, obj):
-        """Возвращает объединенное имя"""
         return f"{obj.last_name} {obj.first_name}"
 
 
-# Если нужна возможность обновлять или создавать объект Employee, можно добавить методы:
 class EmployeeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee

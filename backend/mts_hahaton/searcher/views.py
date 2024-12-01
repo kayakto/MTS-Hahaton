@@ -143,14 +143,8 @@ def search_by_filters(request):
 
 
 def build_unit_hierarchy(unit, depth):
-    """
-    Рекурсивно строит иерархию подразделений до указанной глубины.
-    :param unit: Текущее подразделение
-    :param depth: Текущая глубина рекурсии
-    :return: Словарь с данными подразделения и сотрудниками
-    """
     if depth < 0:
-        return None  # Если глубина отрицательная, не добавляем вложенные подразделения
+        return None
 
     return {
         "id": unit.id,
@@ -166,12 +160,6 @@ def build_unit_hierarchy(unit, depth):
 
 @api_view(['GET'])
 def get_hierarchy(request):
-    """
-    Возвращает иерархию подразделений с сотрудниками, ограниченную по глубине.
-    Принимает параметры:
-    - id: ID подразделения для раскрытия (по умолчанию корневые подразделения)
-    - depth: Глубина раскрытия иерархии (по умолчанию 2)
-    """
     unit_id = request.query_params.get('id')
     depth = int(request.query_params.get('depth', 1))
 
@@ -190,9 +178,6 @@ def get_hierarchy(request):
 
 
 def build_branch_hierarchy(unit):
-    """
-    Рекурсивно строит вложенную иерархию от корня до подразделения сотрудника.
-    """
     if unit is None:
         return None
 
@@ -204,7 +189,6 @@ def build_branch_hierarchy(unit):
     }
 
     if parent_hierarchy:
-        # Вложим текущий узел в children предыдущего уровня
         parent_hierarchy["children"] = [current_unit_data]
         return parent_hierarchy
     else:
@@ -212,11 +196,6 @@ def build_branch_hierarchy(unit):
 
 
 def get_functional_manager(employee):
-    """
-        Возвращает функционального руководителя для указанного сотрудника.
-        :param employee: Экземпляр модели Employee.
-        :return: Словарь с данными функционального руководителя или сообщение об отсутствии.
-        """
     current_unit = employee.unit.parent
 
     while current_unit:
@@ -263,10 +242,6 @@ def get_direct_manager(employee):
 
 @api_view(['GET'])
 def get_employee(request, employee_id):
-    """
-    Возвращает ветку от корневого подразделения до сотрудника.
-    :param employee_id: ID сотрудника
-    """
     employee = Employee.objects.get(id=employee_id)
 
     if not employee:
@@ -280,9 +255,6 @@ def get_employee(request, employee_id):
 
 
 def get_branch_hierarchy(unit):
-    """
-    Строит вложенную структуру от корня до указанного подразделения, используя get_ancestors().
-    """
     hierarchy = {}
     current_level = hierarchy
     ancestors = unit.get_ancestors(include_self=True)
@@ -312,10 +284,6 @@ def get_branch_hierarchy(unit):
 
 @api_view(['GET'])
 def get_employee_branch(request, employee_id):
-    """
-    Возвращает ветку от корневого подразделения до сотрудника.
-    :param employee_id: ID сотрудника
-    """
     employee = Employee.objects.get(id=employee_id)
 
     if not employee:
