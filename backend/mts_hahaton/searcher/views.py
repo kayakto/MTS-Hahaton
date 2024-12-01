@@ -81,22 +81,22 @@ def search_by_filters(request):
 
     for filter_ in filters:
         value = filter_.get('value', '').lower()
-        type_ = filter_.get('type', '')
+        type_ = filter_.get('type', '').lower()
 
-        if type_ in ['Функциональный блок', 'Подразделение']:
+        if type_ in ['функциональный блок', 'подразделение']:
             unit_queries &= Q(name__icontains=value) & Q(unit_type__icontains=type_)
-        elif type_ == 'Должность':
+        elif type_ == 'должность':
             employee_queries &= Q(position__name__icontains=value)
-        elif type_ == 'Роль':
+        elif type_ == 'роль':
             employee_queries &= Q(position__employee_role__icontains=value)
-        elif type_ in ['Имя', 'Фамилия', 'Город', 'Адрес', 'Телефон', 'Почта']:
+        elif type_ in ['имя', 'фамилия', 'город', 'адрес', 'телефон', 'почта']:
             field_map = {
-                'Имя': 'first_name',
-                'Фамилия': 'last_name',
-                'Город': 'city',
-                'Адрес': 'address',
-                'Телефон': 'phone',
-                'Почта': 'email'
+                'имя': 'first_name',
+                'фамилия': 'last_name',
+                'город': 'city',
+                'адрес': 'address',
+                'телефон': 'phone',
+                'почта': 'email'
             }
             employee_queries &= Q(**{f"{field_map[type_]}__icontains": value})
 
@@ -160,7 +160,7 @@ def build_unit_hierarchy(unit, depth):
 
 @api_view(['GET'])
 def get_hierarchy(request):
-    unit_id = request.query_params.get('id')
+    unit_id = request.query_params.get('id', None)
     depth = int(request.query_params.get('depth', 1))
 
     if unit_id:
